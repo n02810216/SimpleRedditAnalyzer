@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<head>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+</head>
+<body>
+<style>
+
+.nation {
+  fill: #888;
+}
+
+.states {
+  fill: none;
+  stroke: #000;
+  stroke-linejoin: round;
+}
+
+.hexagon {
+  stroke: #000;
+}
+
+</style>
+<center>
+    <div class="well">
+        <h2>Aggregated map of Starbucks locations by area</h2>
+    </div>
+</center>
+<svg width="960" height="600"></svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://d3js.org/d3-hexbin.v0.2.min.js"></script>
+<script src="https://d3js.org/topojson.v2.min.js"></script>
+
+<script>
+
+var svg = d3.select("svg"),
+    width = +svg.attr("width"),
+    height = +svg.attr("height");
+
+var parseDate = d3.timeParse("%x");
+
+var color = d3.scaleTime()
+    .domain([new Date(1980, 0, 1), new Date(2017, 0, 1)])
+    .range(["red", "red"])
+    .interpolate(d3.interpolateLab);
+
+var hexbin = d3.hexbin()
+    .extent([[0, 0], [width, height]])
+    .radius(10);
+
+var radius = d3.scaleSqrt()
+    .domain([0, 16])
+    .range([0, 10]);
+
+var projection = d3.geoAlbersUsa()
+    .scale(1260)
+    .translate([480, 300]);
+
+var path = d3.geoPath();
+
+d3.queue()
+    .defer(d3.json, "https://d3js.org/us-10m.v1.json")
+    .defer(d3.tsv, "http://104.236.65.244:8000/data", typeData)
+    .await(ready);
+
+function ready(error, us, points) {
+  if (error) throw error;
+
+  svg.append("path")
+      .datum(topojson.feature(us, us.objects.nation))
+      .attr("class", "nation")
+      .attr("d", path);
+
+  svg.append("path")
+      .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
+      .attr("class", "states")
+      .attr("d", path);
+
+  svg.append("g")
+      .attr("class", "hexagon")
+    .selectAll("path")
+    .data(hexbin(points).sort(function(a, b) { return b.length - a.length; }))
+    .enter().append("path")
+      .attr("d", function(d) { return hexbin.hexagon(radius(d.length)); })
+      .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+      .attr("fill", function(d) { return color(d3.median(d, function(d) { return +d.date; })); });
+}
+
+function typeData(d) {
+  var p = projection(d);
+  d[0] = p[0], d[1] = p[1];
+  d.date = parseDate(d.date);
+  return d;
+}
+
+</script>
+</center>
+<center>
+    <div class="well">
+        <h2>Clustered 3D Data</h2>
+    </div>
+</center>
+<div id="scatterDiv" style="width:100%;height:100%"></div>
+<script>
+Plotly.d3.csv('http://104.236.65.244:8000/datascatter', function(err, rows){
+function unpack(rows, key) {
+	return rows.map(function(row)
+	{ return row[key]; });}
+
+var trace1 = {
+	x:unpack(rows, 'x1'), y: unpack(rows, 'y1'), z: unpack(rows, 'z1'),
+	mode: 'markers',
+	marker: {
+		color: 'rgb(45,255,45)',
+		size: 12,
+		line: {
+		color: 'rgba(217, 217, 217, 0.14)',
+		width: 0.5},
+		opacity: 1},
+	type: 'scatter3d'
+};
+
+var trace2 = {
+	x:unpack(rows, 'x2'), y: unpack(rows, 'y2'), z: unpack(rows, 'z2'),
+	mode: 'markers',
+	marker: {
+		color: 'rgb(237, 45, 45)',
+		size: 12,
+		symbol: 'circle',
+		line: {
+		color: 'rgb(204, 204, 204)',
+		width: 1},
+		opacity: 1},
+	type: 'scatter3d'};
+
+var trace3 = {
+	x:unpack(rows, 'x3'), y: unpack(rows, 'y3'), z: unpack(rows, 'z3'),
+	mode: 'markers',
+	marker: {
+		color: 'rgb(45, 102, 237)',
+		size: 12,
+		symbol: 'circle',
+		line: {
+		color: 'rgb(204, 204, 204)',
+		width: 1},
+		opacity: 1},
+	type: 'scatter3d'};
+
+var trace4 = {
+	x:unpack(rows, 'x4'), y: unpack(rows, 'y4'), z: unpack(rows, 'z4'),
+	mode: 'markers',
+	marker: {
+		color: 'rgb(45, 255, 237)',
+		size: 12,
+		symbol: 'circle',
+		line: {
+		color: 'rgb(204, 204, 204)',
+		width: 1},
+		opacity: 1},
+	type: 'scatter3d'};
+
+var data = [trace1, trace2, trace3, trace4];
+var layout = {margin: {
+	l: 0,
+	r: 0,
+	b: 0,
+	t: 0
+  }};
+Plotly.newPlot('scatterDiv', data, layout);
+});
+        </script>
+</body>

@@ -1,0 +1,282 @@
+
+
+{% load staticfiles %}
+<html>
+<head>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="{% static 'css/RedditStats.css' %}">
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="//d3plus.org/js/d3plus.js"></script>
+</head>
+<br>
+<body>
+<div class="well">
+    <center>
+        <h2>Top 10 boards, ratio of positive to negative comments</h2>
+    </center>
+    <script type="text/javascript">
+        // Setup svg
+        var margin = {top: 20, right: 160, bottom: 35, left: 30};
+        var width = 960 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
+        var svg = d3.select("body")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var data = {{subData|safe}}
+        var dataset = d3.layout.stack()(["Negative", "Neutral", "Positive"].map(function(posts) {
+            return data.map(function(d) {
+                return {x:d.Subreddit, y: +d[posts]};
+            });
+        }));
+
+
+        // Set x, y and colors
+        var x = d3.scale.ordinal()
+            .domain(dataset[0].map(function(d) { return d.x; }))
+            .rangeRoundBands([10, width-10], 0.02);
+
+        var y = d3.scale.linear()
+            .domain([0, d3.max(dataset, function(d) {  return d3.max(d, function(d) { return d.y0 + d.y; });  })])
+            .range([height, 0]);
+
+        var colors = ["#9494FF", "#b7b7b7", "#FF8B60"];
+
+        // Define and draw axes
+        var yAxis = d3.svg.axis()
+            .scale(y)
+            .orient("left")
+            .ticks(5)
+            .tickSize(-width, 0, 0)
+            .tickFormat( function(d) { return d } );
+
+        var xAxis = d3.svg.axis()
+            .scale(x)
+            .orient("bottom")
+            .tickFormat( function(d) { return d} );
+
+        svg.append("g")
+            .attr("class", "y axis")
+            .call(yAxis);
+
+        svg.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis);
+
+
+        // Create groups, rects for each segment
+        var groups = svg.selectAll("g.cost")
+            .data(dataset)
+            .enter().append("g")
+            .attr("class", "cost")
+            .style("fill", function(d, i) { return colors[i]; });
+
+        var rect = groups.selectAll("rect")
+            .data(function(d) { return d; })
+            .enter()
+            .append("rect")
+            .attr("x", function(d) { return x(d.x); })
+            .attr("y", function(d) { return y(d.y0 + d.y); })
+            .attr("height", function(d) { return y(d.y0) - y(d.y0 + d.y); })
+            .attr("width", x.rangeBand())
+            .on("mouseover", function() { tooltip.style("display", null); })
+            .on("mouseout", function() { tooltip.style("display", "none"); })
+            .on("mousemove", function(d) {
+                var xPosition = d3.mouse(this)[0] - 15;
+                var yPosition = d3.mouse(this)[1] - 25;
+                tooltip.attr("transform", "translate(" + xPosition + "," + yPosition + ")");
+                tooltip.select("text").text(d.y);
+            });
+
+        // Draw legend
+        var legend = svg.selectAll(".legend")
+            .data(colors)
+            .enter().append("g")
+            .attr("class", "legend")
+            .attr("transform", function(d, i) { return "translate(30," + i * 19 + ")"; });
+
+        legend.append("rect")
+            .attr("x", width - 18)
+            .attr("width", 18)
+            .attr("height", 18)
+            .style("fill", function(d, i) {return colors.slice().reverse()[i];});
+
+        legend.append("text")
+            .attr("x", width + 5)
+            .attr("y", 9)
+            .attr("dy", ".35em")
+            .style("text-anchor", "start")
+            .text(function(d, i) {
+                switch (i) {
+                    case 0: return "Positive";
+                    case 1: return "Neutral";
+                    case 2: return "Negative";
+                }
+            });
+
+        // Prep the tooltip bits, initial display is hidden
+        var tooltip = svg.append("g")
+            .attr("class", "tooltip")
+            .style("display", "none");
+
+        tooltip.append("rect")
+            .attr("width", 30)
+            .attr("height", 20)
+            .attr("fill", "white")
+            .style("opacity", 0.5);
+
+        tooltip.append("text")
+            .attr("x", 15)
+            .attr("dy", "1.2em")
+            .style("text-anchor", "middle")
+            .attr("font-size", "12px")
+            .attr("font-weight", "bold");
+
+    </script>
+</div>
+<div class="well">
+    <center>
+        <h2>Activity heatmap over last 30 days</h2>
+    </center>
+</div>
+<style type="text/css">
+    body {
+        margin:0 auto;
+        position:relative;
+        width:958px;
+    }
+    .chart rect {
+        stroke: white;
+    }
+</style>
+<script>
+    //Heat map
+    function cell_dim(total, cells) {
+        return Math.floor(total / cells)
+    }
+    var total_height = 1200;
+    var total_width = 900;
+    var rows = 30; // 30 days
+    var cols = 24; // 24hrs in a day
+    var row_height = cell_dim(total_height, rows);
+    var col_width = cell_dim(total_width, cols);
+    var data = [];
+    data = {{postsPerHour | safe}};
+    console.log(data);
+    var times = ["12:00AM", "1:00AM", "2:00AM", "3:00AM", "4:00AM", "5:00AM", "6:00AM",
+        "7:00AM", "8:00AM", "9:00AM", "10:00AM", "11:00AM", "12:00PM", "1:00PM", "2:00PM",
+        "3:00PM", "4:00PM", "5:00PM", "6:00PM", "7:00PM", "8:00PM", "9:00PM", "10:00PM",
+        "11:00PM"
+    ];
+    var xScale = d3.scale.ordinal()
+        .domain(times)
+        .range([0, times.length]);
+
+    var xAxis = d3.svg.axis()
+        .scale(xScale)
+        .tickFormat(function(d) {
+            return d;
+        })
+        .orient("top");
+
+    var color_chart = d3.select("body")
+        .append("svg")
+        .attr("class", "chart")
+        .attr("width", col_width * cols)
+        .attr("height", row_height * rows);
+
+
+    var color = d3.scale.linear()
+        .domain([d3.min(data), d3.max(data)])
+        .range(["#FFF0F0", "#8b0000"]);
+    color_chart.selectAll("rect")
+        .data(data)
+        .enter()
+        .append("rect")
+        .attr("y", function(d, i) {
+            return Math.floor(i / rows) * row_height;
+        })
+        .attr("x", function(d, i) {
+            return i % rows * col_width;
+        })
+        .attr("width", col_width)
+        .attr("height", row_height)
+        .attr("fill", color)
+        //X axis text (broken)
+        .color_chart.append("g")
+        .attr("class","x axis")
+        .attr("transform","translate(0,"+total_height+")")
+        .call(xAxis);
+</script>
+<div class="well">
+    <center>
+        <h2>Most frequently used 100 words (Excluding contractions, most common 1000 words)</h2>
+    </center>
+    <div class="chart"></div>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script>
+        dataset = {
+            "children": [ {{wordcount|safe}} ]
+        };
+
+        var diameter = 600;
+        var color = d3.scaleOrdinal(d3.schemeCategory20);
+
+        var bubble = d3.pack(dataset)
+            .size([diameter, diameter])
+            .padding(1.5);
+        var svg = d3.select("body")
+            .append("svg")
+            .attr("width", diameter)
+            .attr("height", diameter)
+            .attr("class", "bubble");
+
+        var nodes = d3.hierarchy(dataset)
+            .sum(function(d) { return d.count; });
+
+        var node = svg.selectAll(".node")
+            .data(bubble(nodes).descendants())
+            .enter()
+            .filter(function(d){
+                return  !d.children
+            })
+            .append("g")
+            .attr("class", "node")
+            .attr("transform", function(d) {
+                return "translate(" + d.x + "," + d.y + ")";
+            });
+
+        node.append("title")
+            .text(function(d) {
+                return d.word + ": " + d.count;
+            });
+
+        node.append("circle")
+            .attr("r", function(d) {
+                return d.r;
+            })
+            .style("fill", function(d) {
+                return color(d.word);
+            });
+
+        node.append("text")
+            .attr("dy", ".3em")
+            .style("text-anchor", "middle")
+            .text(function(d) {
+                return d.data.word.substring(0, d.r / 3) + ": " + d.data.count;
+            });
+
+        d3.select(self.frameElement)
+            .style("height", diameter + "px");
+
+
+    </script>
+</div>
+</body>
+</html>
+

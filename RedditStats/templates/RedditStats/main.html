@@ -1,0 +1,69 @@
+
+{% load staticfiles %}
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+    <title>Reddit account visualizer</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap-theme.min.css' %}">
+        <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <style>
+        body {
+            padding-top: 50px;
+            padding-bottom: 20px;
+        }
+        .jumbotron{
+            color: white;
+            background-color:#293950;
+        }
+    </style>
+    <script type="text/javascript" src="http://code.jquery.com/jquery-1.11.0.min.js"></script>
+    <script type="text/javascript">
+
+        $(document).ready(function(){
+            $('#inputButton').click(function(e) {
+                var inputvalue = $("#input").val();
+                window.location.replace("/user/"+inputvalue);
+
+            });
+        });
+    </script>
+</head>
+<body>
+<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="#">Home</a>
+            <a class="navbar-brand" href="/demo">Demo</a>
+        </div>
+    </div>
+</nav>
+<!-- Main jumbotron for a primary marketing message or call to action -->
+<div class="jumbotron">
+    <div class="container">
+        <center>
+            <h1>Enter a reddit username!</h1>
+        </center>
+        <div class="col-lg-6">
+            <div class="input-group-lg input-group">
+                <span class="input-group-addon" id="basic-addon3">reddit.com/u/</span>
+                <input type="text" id="input" class="form-control" placeholder="Username">
+                <span class=" input-group-btn ">
+               <button class="btn btn-secondary btn-success" id="inputButton" type="button">Go!</button>
+               </span>
+            </div>
+        </div>
+	<br>
+        <center>
+            <h1>Or:</h1>
+        </center>
+	<br>
+        <a type="button" href="/user/{{username}}" class="btn btn-primary btn-lg btn-block btn-success">Pick a random Redditor</a>
+    </div>
+</div>
+<hr>
+<footer>
+</footer>
+</div>
+</body>
+</html>
+
